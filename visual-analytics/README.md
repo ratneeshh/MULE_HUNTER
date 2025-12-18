@@ -46,19 +46,19 @@ It visualizes financial transaction graphs with risk scores, highlights suspicio
 
 ## 🧠 Architecture
 
-- nodes.csv + transactions.csv
-  -↓
-- Extended Isolation Forest (EIF)
-  ↓
-  nodes_scored.csv
-  ↓
-  Graph Adapter (viz_ready_nodes.py)
-  ↓
-  nodes_viz.json + fraud_explanations.json
-  ↓
-  React WebGL Visualization
-  ↓
-  Interactive Investigative UI
+- nodes.csv + transactions.csv   
+
+- Extended Isolation Forest (EIF)   
+  
+- nodes_scored.csv    
+  
+- Graph Adapter (viz_ready_nodes.py)    
+  
+- nodes_viz.json + fraud_explanations.json     
+  
+- React WebGL Visualization        
+  
+- Interactive Investigative UI      
 
 ---
 
