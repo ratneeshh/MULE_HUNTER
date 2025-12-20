@@ -51,7 +51,7 @@ SHAP explainability, and high-performance 3D WebGL visualization.
 
 ---
 
-### 🧬 `banking-core/` — Reactive Backend _(Prishaa)_
+### 🧬 `backend/` — Reactive Backend _(Prishaa)_
 
 High-throughput transaction simulation using Spring WebFlux,  
 AI integration, and resilience via circuit breakers.
