@@ -3,8 +3,6 @@ name: Deploy Control Tower
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'control-tower/**' # Trigger only if this folder changes
 
 jobs:
   build-and-push:
