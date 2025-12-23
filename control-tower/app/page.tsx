@@ -167,8 +167,7 @@ By combining graph analytics, machine learning, and explainable AI, MuleHunter e
               <div className="grid grid-cols-3">
                  <div className="m-5 p-3">
                   <div className="text-3xl text-[#caff33]">65%</div>
-                  <div className="text-xs text-gray-400">Reduction in manual review workload
-</div>
+                  <div className="text-xs text-gray-400">Reduction in manual review workload</div>
                  </div>
                   <div className="m-5 p-3">
                   <div className="text-3xl text-[#caff33]">70%</div>

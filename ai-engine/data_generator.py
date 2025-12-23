@@ -114,7 +114,7 @@ def generate_dataset():
     required_cols = ["node_id", "account_age_days", "balance", "in_out_ratio", "pagerank", "tx_velocity", "is_fraud"]
     df_nodes = df_nodes[required_cols] # Discard everything else
     
-    df_nodes.to_csv(os.path.join(OUTPUT_DIR, "nodes.csv"), index=False)
+    df_nodes.to_csv(os.path.join(OUTPUT_DIR, "nodes.csv"), index=False) # This line should be changed. Instead of storing output data locally, it should call an api which send data into database.
     print(f"   Saved nodes.csv ({len(df_nodes)} rows) - STRICT SCHEMA MODE")
 
     # 5.2 PREPARE TRANSACTIONS
@@ -132,7 +132,7 @@ def generate_dataset():
     # Ensure Edge Schema Order
     df_edges = df_edges[["source", "target", "amount", "timestamp"]]
     
-    df_edges.to_csv(os.path.join(OUTPUT_DIR, "transactions.csv"), index=False)
+    df_edges.to_csv(os.path.join(OUTPUT_DIR, "transactions.csv"), index=False) # This line should be changed. Instead of storing output data locally, it should call an api which send data into database.
     print(f"   Saved transactions.csv ({len(df_edges)} rows)")
     
     print(f"SUCCESS! Data locked in shared-data.")
