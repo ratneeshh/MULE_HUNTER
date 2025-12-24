@@ -67,5 +67,7 @@ jobs:
             # 4. Cleanup old broken state and start fresh
             # Using 'docker compose' (the modern plugin) instead of 'docker-compose'
             docker compose down --remove-orphans
-            docker compose pull
-            docker compose up -d
+            docker compose pull next-app
+            docker compose up -d --force-recreate
+            docker image prune -f
+            
