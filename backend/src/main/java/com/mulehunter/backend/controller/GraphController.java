@@ -1,5 +1,6 @@
 package com.mulehunter.backend.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +16,6 @@ import com.mulehunter.backend.DTO.GraphLinkDTO;
 import com.mulehunter.backend.DTO.GraphNodeDTO;
 import com.mulehunter.backend.DTO.GraphNodeDetailDTO;
 import com.mulehunter.backend.DTO.GraphResponseDTO;
-import com.mulehunter.backend.repository.TransactionRepository;
 
 import reactor.core.publisher.Mono;
 
@@ -23,98 +23,149 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/api/graph")
 public class GraphController {
 
-    private final ReactiveMongoTemplate reactiveMongoTemplate;
-    private final TransactionRepository transactionRepository;
+        private final ReactiveMongoTemplate mongo;
 
-    public GraphController(
-            ReactiveMongoTemplate reactiveMongoTemplate,
-            TransactionRepository transactionRepository
-    ) {
-        this.reactiveMongoTemplate = reactiveMongoTemplate;
-        this.transactionRepository = transactionRepository;
-    }
+        public GraphController(ReactiveMongoTemplate mongo) {
+                this.mongo = mongo;
+        }
 
-    @GetMapping
-    public Mono<GraphResponseDTO> getGraph() {
+        // =====================================================
+        // GET FULL GRAPH (nodes + links)
+        // =====================================================
+        @GetMapping
+        public Mono<GraphResponseDTO> getGraph() {
 
-        Mono<List<GraphNodeDTO>> nodesMono =
-                reactiveMongoTemplate.findAll(Map.class, "nodes")
-                        .map(doc -> {
+                // ---------- NODES ----------
+                Mono<List<GraphNodeDTO>> nodesMono = mongo.findAll(Map.class, "nodes")
+                                .map(doc -> {
 
-                            String nodeId = doc.get("node_id").toString();
+                                        Object nodeIdObj = doc.get("node_id");
+                                        if (nodeIdObj == null)
+                                                return null;
 
-                            double anomalyScore =
-                                    Double.parseDouble(doc.getOrDefault("anomaly_score", "0").toString());
+                                        String nodeId = nodeIdObj.toString();
 
-                            boolean isAnomalous =
-                                    Integer.parseInt(doc.getOrDefault("is_anomalous", "0").toString()) == 1;
+                                        double anomalyScore = parseDouble(doc.get("anomaly_score"));
 
-                            long txVelocity =
-                                    Long.parseLong(doc.getOrDefault("tx_velocity", "0").toString());
+                                        boolean isAnomalous = "1"
+                                                        .equals(doc.getOrDefault("is_anomalous", "0").toString());
 
-                            return new GraphNodeDTO(
-                                    nodeId,
-                                    anomalyScore,
-                                    isAnomalous,
-                                    txVelocity
-                            );
-                        })
-                        .collectList();
+                                        long txVelocity = parseLong(doc.get("tx_velocity"));
 
-        Mono<List<GraphLinkDTO>> linksMono =
-                transactionRepository.findAll()
-                        .map(t -> new GraphLinkDTO(
-                                t.getSourceAccount(),
-                                t.getTargetAccount(),
-                                t.getAmount()
-                        ))
-                        .collectList();
+                                        return new GraphNodeDTO(
+                                                        nodeId,
+                                                        anomalyScore,
+                                                        isAnomalous,
+                                                        txVelocity);
+                                })
+                                .filter(n -> n != null)
+                                .collectList()
+                                .onErrorReturn(List.of());
 
-        return Mono.zip(nodesMono, linksMono)
-                .map(tuple -> new GraphResponseDTO(
-                        tuple.getT1(),
-                        tuple.getT2()
-                ));
-    }
+                // ---------- LINKS ----------
+                Mono<List<GraphLinkDTO>> linksMono = mongo.findAll(Map.class, "transactions")
+                                .map(doc -> {
 
-    @GetMapping("/node/{nodeId}")
-public Mono<GraphNodeDetailDTO> getNodeDetail(@PathVariable String nodeId) {
+                                        Object srcObj = doc.get("source");
+                                        Object tgtObj = doc.get("target");
 
-    Query query = Query.query(
-            new Criteria().orOperator(
-                    Criteria.where("node_id").is(nodeId),
-                    Criteria.where("node_id").is(Integer.parseInt(nodeId))
-            )
-    );
+                                        if (srcObj == null || tgtObj == null)
+                                                return null;
 
-    return reactiveMongoTemplate.findOne(query, Map.class, "nodes")
-            .switchIfEmpty(Mono.error(
-                    new RuntimeException("Node not found: " + nodeId)
-            ))
-            .map(doc -> {
+                                        String source = srcObj.toString();
+                                        String target = tgtObj.toString();
 
-                double anomalyScore =
-                        Double.parseDouble(doc.getOrDefault("anomaly_score", "0").toString());
+                                        BigDecimal amount = parseBigDecimal(doc.get("amount"));
 
-                boolean isAnomalous =
-                        Integer.parseInt(doc.getOrDefault("is_anomalous", "0").toString()) == 1;
+                                        return new GraphLinkDTO(source, target, amount);
+                                })
+                                .filter(l -> l != null) // 🔥 prevents ForceGraph crash
+                                .collectList()
+                                .onErrorReturn(List.of());
 
-                @SuppressWarnings("unchecked")
-                List<String> reasons =
-                        (List<String>) doc.getOrDefault("reasons", List.of());
+                return Mono.zip(nodesMono, linksMono)
+                                .map(t -> new GraphResponseDTO(t.getT1(), t.getT2()))
+                                .onErrorReturn(new GraphResponseDTO(List.of(), List.of()));
+        }
 
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> shapFactors =
-                        (List<Map<String, Object>>) doc.getOrDefault("shap_factors", List.of());
+        // =====================================================
+        // GET SINGLE NODE DETAIL (SHAP / reasons)
+        // =====================================================
+        @GetMapping("/node/{nodeId}")
+        public Mono<GraphNodeDetailDTO> getNodeDetail(@PathVariable String nodeId) {
 
-                return new GraphNodeDetailDTO(
-                        doc.get("node_id").toString(),
-                        anomalyScore,
-                        isAnomalous,
-                        reasons,
-                        shapFactors
-                );
-            });
-}
+                // 🔥 SUPPORT BOTH NUMBER & STRING node_id
+                Query query = new Query(
+                                new Criteria().orOperator(
+                                                Criteria.where("node_id").is(nodeId),
+                                                Criteria.where("node_id").is(parseIntSafe(nodeId))));
 
+                return mongo.findOne(query, Map.class, "nodes")
+                                .map(doc -> {
+
+                                        double anomalyScore = parseDouble(doc.get("anomaly_score"));
+
+                                        boolean isAnomalous = "1"
+                                                        .equals(doc.getOrDefault("is_anomalous", "0").toString());
+
+                                        @SuppressWarnings("unchecked")
+                                        List<String> reasons = (List<String>) doc.getOrDefault("reasons", List.of());
+
+                                        @SuppressWarnings("unchecked")
+                                        List<Map<String, Object>> shapFactors = (List<Map<String, Object>>) doc
+                                                        .getOrDefault(
+                                                                        "shap_factors", List.of());
+
+                                        return new GraphNodeDetailDTO(
+                                                        doc.get("node_id").toString(),
+                                                        anomalyScore,
+                                                        isAnomalous,
+                                                        reasons,
+                                                        shapFactors);
+                                })
+                                // 🔥 NEVER return empty body
+                                .switchIfEmpty(
+                                                Mono.just(
+                                                                new GraphNodeDetailDTO(
+                                                                                nodeId,
+                                                                                0.0,
+                                                                                false,
+                                                                                List.of(),
+                                                                                List.of())));
+        }
+
+        // =====================================================
+        // SAFE PARSERS
+        // =====================================================
+        private static double parseDouble(Object v) {
+                try {
+                        return v == null ? 0.0 : Double.parseDouble(v.toString());
+                } catch (Exception e) {
+                        return 0.0;
+                }
+        }
+
+        private static long parseLong(Object v) {
+                try {
+                        return v == null ? 0L : Long.parseLong(v.toString());
+                } catch (Exception e) {
+                        return 0L;
+                }
+        }
+
+        private static BigDecimal parseBigDecimal(Object v) {
+                try {
+                        return v == null ? BigDecimal.ZERO : new BigDecimal(v.toString());
+                } catch (Exception e) {
+                        return BigDecimal.ZERO;
+                }
+        }
+
+        private static Integer parseIntSafe(String v) {
+                try {
+                        return Integer.valueOf(v);
+                } catch (Exception e) {
+                        return null;
+                }
+        }
 }

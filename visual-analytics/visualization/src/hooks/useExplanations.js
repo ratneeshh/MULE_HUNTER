@@ -1,47 +1,54 @@
 import { useEffect, useState } from "react";
 
-export default function useExplanations() {
-  const [explanations, setExplanations] = useState({});
+export default function useExplanations(nodeId) {
+  const [explanation, setExplanation] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (nodeId === null || nodeId === undefined) {
+      setExplanation(null);
+      return;
+    }
+
     const controller = new AbortController();
 
-    async function loadExplanations() {
+    async function loadExplanation() {
       try {
+        setLoading(true);
+
         const res = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/node/{id}`,
+          `http://localhost:8080/api/graph/node/${nodeId}`,
           { signal: controller.signal }
         );
 
-        if (!res.ok) {
-          throw new Error(`Backend returned ${res.status}`);
+        const text = await res.text();
+
+        // Safety: frontend HTML instead of API
+        if (text.trim().startsWith("<")) {
+          console.error("HTML received instead of JSON:", text);
+          return;
         }
 
-        const contentType = res.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          throw new TypeError("Backend did not return JSON");
-        }
+        const data = JSON.parse(text);
 
-        const data = await res.json();
-
-        const map = {};
-        data?.forEach((item) => {
-          map[item.node_id] = {
-            reasons: item.reasons,
-          };
+        setExplanation({
+          reasons: data.reasons ?? [],
+          shapFactors: data.shap_factors ?? data.shapFactors ?? [],
+          anomalyScore: data.anomalyScore,
+          isAnomalous: data.isAnomalous,
         });
-
-        setExplanations(map);
       } catch (err) {
         if (err.name !== "AbortError") {
           console.error("Failed to load explanations:", err.message);
         }
+      } finally {
+        setLoading(false);
       }
     }
 
-    loadExplanations();
+    loadExplanation();
     return () => controller.abort();
-  }, []);
+  }, [nodeId]);
 
-  return explanations;
+  return { explanation, loading };
 }
