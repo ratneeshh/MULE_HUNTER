@@ -9,7 +9,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   async function getRoleToken() {
-    const res = await fetch("/api/user/role", {
+    const res = await fetch("http://13.48.249.157:3000/api/user/role", {
       credentials: "include",
     });
 
@@ -57,7 +57,7 @@ function App() {
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
       <div className="flex-1">
-        <FraudGraph3D onNodeSelect={setSelectedNode} token={token} />
+        <FraudGraph3D onNodeSelect={setSelectedNode} /*token={token} * */ />
       </div>
 
       <NodeInspector

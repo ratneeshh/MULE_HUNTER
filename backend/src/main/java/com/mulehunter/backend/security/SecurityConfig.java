@@ -11,7 +11,7 @@ public class SecurityConfig {
   public FilterRegistrationBean<JwtAuthFilter> jwtFilter(JwtAuthFilter filter) {
     FilterRegistrationBean<JwtAuthFilter> reg = new FilterRegistrationBean<>();
     reg.setFilter(filter);
-    reg.addUrlPatterns("/api/graph");
+    reg.addUrlPatterns("");
     reg.setOrder(1);
     return reg;
   }
