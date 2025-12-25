@@ -4,14 +4,13 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.nn import SAGEConv
 import os
-import subprocess  
+import subprocess
+import logging
 
-# --- CONFIGURATION ---
 SHARED_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "shared-data")
 MODEL_PATH = os.path.join(SHARED_DATA_DIR, "mule_model.pth")
 DATA_PATH = os.path.join(SHARED_DATA_DIR, "processed_graph.pt")
 
-# --- DEFINING THE BRAIN ---
 class MuleSAGE(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
         super(MuleSAGE, self).__init__()
@@ -24,7 +23,6 @@ class MuleSAGE(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
 
-# --- API SCHEMAS ---
 class RiskRequest(BaseModel):
     node_id: int
 
@@ -34,7 +32,12 @@ class RiskResponse(BaseModel):
     verdict: str
     model_version: str
 
-# --- INITIALIZING THE APP ---
+class TransactionRequest(BaseModel):
+    source_id: int
+    target_id: int
+    amount: float
+    timestamp: str = "2025-12-25"
+
 app = FastAPI(title="Mule Hunter AI Service", version="Final-Gold")
 
 model = None
@@ -49,32 +52,29 @@ def load_brain():
             model = MuleSAGE(in_channels=5, hidden_channels=16, out_channels=2)
             model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
             model.eval()
-            print("Brain loaded.")
+            print("Brain loaded successfully.")
         except Exception as e:
             print(f"Load failed: {e}")
+    else:
+        print("Model or Data not found. Please run /generate-data and /train-model.")
 
-# --- 1. GENERATE DATA ENDPOINT (MISSING IN YOURS) ---
 @app.post("/generate-data")
 def generate_simulation():
-    """For data simulation"""
     try:
         subprocess.run(["python", "data_generator.py"], check=True)
         return {"status": "New Banking Simulation Created (nodes.csv updated)"}
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- 2. TRAIN ENDPOINT ---
 @app.post("/train-model")
 def train_brain():
-    """Triggers training and reloads the brain"""
     try:
         subprocess.run(["python", "train_model.py"], check=True)
-        load_brain() # Reload immediately
+        load_brain()
         return {"status": "Training Complete. Model Updated."}
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- 3. PREDICT ENDPOINT ---
 @app.post("/predict", response_model=RiskResponse)
 def predict_risk(request: RiskRequest):
     global model, graph_data
@@ -98,4 +98,35 @@ def predict_risk(request: RiskRequest):
         "risk_score": round(fraud_risk, 4), 
         "verdict": verdict, 
         "model_version": "Gold-v1"
+    }
+
+@app.post("/analyze-transaction", response_model=RiskResponse)
+def analyze_dynamic_transaction(tx: TransactionRequest):
+    global model, graph_data
+    
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded. Train first.")
+
+    new_edge = torch.tensor([[tx.source_id], [tx.target_id]], dtype=torch.long)
+    temp_edge_index = torch.cat([graph_data.edge_index, new_edge], dim=1)
+    
+    with torch.no_grad():
+        out = model(graph_data.x, temp_edge_index)
+        
+        if tx.source_id >= graph_data.num_nodes:
+             safe_id = 0 
+        else:
+             safe_id = tx.source_id
+
+        fraud_risk = float(out[safe_id].exp()[1])
+
+    verdict = "SAFE"
+    if fraud_risk > 0.8: verdict = "CRITICAL (MULE)"
+    elif fraud_risk > 0.5: verdict = "SUSPICIOUS"
+
+    return {
+        "node_id": tx.source_id,
+        "risk_score": round(fraud_risk, 4),
+        "verdict": verdict,
+        "model_version": "Dynamic-Orchestrator-v1"
     }
