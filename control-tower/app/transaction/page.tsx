@@ -108,17 +108,17 @@ export default function FakeTransactionPage() {
 
             <div className="flex-1 overflow-y-auto pr-2 space-y-4">
 
-              {!result && (
+              {/* {!result && (
                 <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-800 rounded-xl">
                   <p className="text-gray-500 italic">
                     Submit a transaction to trigger AI analysis
                   </p>
                 </div>
-              )}
+              )} */}
 
               {result && (
                 <>
-                  {/* 🧬 CARD 1 — Feature Engineering */}
+                  {/* 🧬 CARD 1 — Unsupervised ML*/}
                   <div className="p-4 bg-gray-900 rounded-xl border border-gray-800">
                     <h3 className="font-semibold mb-2 text-[#caff33]">
                       🧬 Feature Engineering
@@ -135,7 +135,31 @@ export default function FakeTransactionPage() {
                     </div>
                   </div>
 
-                  {/* 🟠 CARD 2 — Unsupervised ML */}
+                  {/* 🟠 CARD 2 — JA3 Device fingerprinting */}
+
+                  <div className="p-4 bg-gray-900 rounded-xl border border-gray-800">
+                    <h3 className="font-semibold mb-2 text-red-400">
+                      🔗 Device & Pattern Correlation
+                    </h3>
+
+                    {!result.correlation.ja3Detected ? (
+                      <p className="text-sm text-gray-400">
+                        No shared device fingerprint or coordinated activity detected.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-300">
+                          Shared device fingerprint detected across accounts:
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-red-300 mt-2">
+                          {result.correlation.linkedAccounts.map((a: string, i: number) => (
+                            <li key={i}>{a}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                   {/* 🔗Supervised Model */}
                   <div className="p-4 bg-gray-900 rounded-xl border border-gray-800">
                     <h3 className="font-semibold mb-2 text-orange-400">
                       🟠 Behavioral Anomaly Detection
@@ -163,29 +187,8 @@ export default function FakeTransactionPage() {
                     </div>
                   </div>
 
-                  {/* 🔗 CARD 3 — Correlation / JA3 */}
-                  <div className="p-4 bg-gray-900 rounded-xl border border-gray-800">
-                    <h3 className="font-semibold mb-2 text-red-400">
-                      🔗 Device & Pattern Correlation
-                    </h3>
-
-                    {!result.correlation.ja3Detected ? (
-                      <p className="text-sm text-gray-400">
-                        No shared device fingerprint or coordinated activity detected.
-                      </p>
-                    ) : (
-                      <>
-                        <p className="text-sm text-gray-300">
-                          Shared device fingerprint detected across accounts:
-                        </p>
-                        <ul className="list-disc list-inside text-sm text-red-300 mt-2">
-                          {result.correlation.linkedAccounts.map((a: string, i: number) => (
-                            <li key={i}>{a}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                  </div>
+                 
+                  
 
                   {/* 🚨 CARD 4 — Final Decision */}
                   <div className="p-4 bg-gray-900 rounded-xl border border-gray-800">
