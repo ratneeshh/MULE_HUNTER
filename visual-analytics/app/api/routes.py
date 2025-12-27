@@ -3,6 +3,10 @@ from pydantic import BaseModel
 from typing import List
 import asyncio
 
+from sse_starlette.sse import EventSourceResponse
+from typing import Dict, Any
+
+
 from app.core.security import verify_internal_api_key
 from app.services.node_pipeline import run_node_pipeline
 
@@ -51,3 +55,42 @@ def reanalyze_nodes(
         "transactionId": request.transactionId,
         "nodes": [n.nodeId for n in request.nodes]
     }
+
+
+@router.get(
+    "/visual/stream/unsupervised",
+    dependencies=[Depends(verify_internal_api_key)]
+)
+async def stream_unsupervised(
+    transactionId: str,
+    nodeId: int
+):
+    """
+    Streams EIF + SHAP analysis steps live to frontend.
+    """
+
+    event_queue: asyncio.Queue = asyncio.Queue()
+
+    async def runner():
+        # Reuse the SAME pipeline
+        await run_node_pipeline(
+            nodes=[NodePayload(nodeId=nodeId, role="source")],
+            event_queue=event_queue
+        )
+
+    # Run ML asynchronously
+    asyncio.create_task(runner())
+
+    async def event_generator():
+        while True:
+            event = await event_queue.get()
+            yield {
+                "event": event["stage"],
+                "data": event["data"]
+            }
+
+            # Stop stream when pipeline finishes
+            if event["stage"] == "unsupervised_completed":
+                break
+
+    return EventSourceResponse(event_generator())

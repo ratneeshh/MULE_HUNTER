@@ -1,0 +1,113 @@
+"use client";
+
+type VisualAnalyticsCardProps = {
+  vaStatus: "idle" | "running" | "done" | "failed";
+  vaEvents: any[];
+};
+
+export default function VisualAnalyticsCard({
+  vaStatus,
+  vaEvents,
+}: VisualAnalyticsCardProps) {
+  if (vaStatus === "idle") {
+    return (
+      <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-800 rounded-xl">
+        <p className="text-gray-500 italic">
+          Submit a transaction to start Visual-Analytics
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 bg-gray-900 rounded-xl border border-gray-800 space-y-3">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-orange-400">
+          🟠 Visual-Analytics — Unsupervised ML
+        </h3>
+
+        <span
+          className={`text-xs px-2 py-1 rounded-full ${
+            vaStatus === "running"
+              ? "bg-yellow-500/20 text-yellow-400"
+              : vaStatus === "done"
+              ? "bg-green-500/20 text-green-400"
+              : "bg-red-500/20 text-red-400"
+          }`}
+        >
+          {vaStatus.toUpperCase()}
+        </span>
+      </div>
+
+      <p className="text-xs text-gray-400">
+        Graph-based · Population-aware · Explainable (EIF + SHAP)
+      </p>
+
+      {/* STREAMED EVENTS */}
+      <div className="space-y-2 text-sm text-gray-300">
+        {vaEvents.map((e, i) => (
+          <div key={i}>
+            {e.stage === "population_loaded" && (
+              <>📐 Loaded {e.data.total_nodes} reference accounts</>
+            )}
+
+            {e.stage === "scoring_started" && (
+              <>🧬 Constructing graph feature vector</>
+            )}
+
+            {e.stage === "eif_result" && (
+              <>
+                📉 EIF Score <b>{e.data.score}</b>{" "}
+                {e.data.is_anomalous ? (
+                  <span className="text-red-500">→ ANOMALOUS</span>
+                ) : (
+                  <span className="text-green-400">→ NORMAL</span>
+                )}
+              </>
+            )}
+
+            {e.stage === "shap_started" && (
+              <>🧠 Running SHAP explainability</>
+            )}
+
+            {e.stage === "shap_completed" && (
+              <>
+                🧠 Top contributing features:
+                <ul className="list-disc list-inside text-xs text-gray-400 mt-1">
+                  {e.data.top_factors.map((f: any, idx: number) => (
+                    <li key={idx}>
+                      {f.feature} (impact {f.impact})
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {e.stage === "shap_skipped" && (
+              <>🧠 SHAP skipped — normal behavior</>
+            )}
+
+            {e.stage === "unsupervised_completed" && (
+              <div className="mt-2 font-semibold text-green-400">
+                ✅ Visual-Analytics completed
+              </div>
+            )}
+
+            {e.stage === "unsupervised_failed" && (
+              <div className="text-red-500">
+                ❌ Visual-Analytics failed
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {vaStatus === "running" && (
+        <div className="text-xs text-gray-500 italic">
+          Analyzing behavioral patterns…
+        </div>
+      )}
+    </div>
+  );
+}

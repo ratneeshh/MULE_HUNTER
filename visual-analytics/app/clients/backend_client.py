@@ -1,6 +1,7 @@
 import logging
 import httpx
 from app.config import BACKEND_BASE_URL, REQUEST_TIMEOUT
+from typing import Dict, Any
 
 
 # INTERNAL SAFE POST
@@ -90,4 +91,13 @@ async def post_fraud_explanation(node_id: int, reasons: list):
             }
         ]
     )
+
+async def emit_event(queue, stage: str, data: Dict[str, Any]):
+    """
+    Push ML step updates to SSE queue.
+    """
+    await queue.put({
+        "stage": stage,
+        "data": data
+    })    
 
