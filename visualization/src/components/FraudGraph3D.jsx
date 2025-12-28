@@ -89,7 +89,7 @@ export default function FraudGraph3D({
 
     async function loadGraph() {
       try {
-        const res = await fetch(`http://51.20.82.63:8080/api/graph`, {
+        const res = await fetch(`http://localhost:8080/api/graph`, {
           signal: controller.signal,
           /*headers: {
             Authorization: `Bearer ${token}`,

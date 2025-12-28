@@ -9,9 +9,6 @@ Steps to create and run the FastAPI environment:
 3. Activate environment
    mule-va\Scripts\Activate.ps1
 
-(If activation is blocked, run once:
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned)
-
 4. Install dependencies
    pip install -r requirements.txt
 

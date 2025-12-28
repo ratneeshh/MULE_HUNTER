@@ -17,7 +17,7 @@ export default function useExplanations(nodeId) {
         setLoading(true);
 
         const res = await fetch(
-          `http://localhost:8080/api/graph/node/${nodeId}`,
+          `http://51.20.82.63:8080/api/graph/node/${nodeId}`,
           { signal: controller.signal }
         );
 
