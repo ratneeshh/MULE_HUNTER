@@ -32,7 +32,7 @@ public class TransactionService {
             NodeEnrichedService nodeEnrichedService,
             
             @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl,
-            @Value("${visual.service.url:http://localhost:8000}") String visualServiceUrl
+            @Value("${visual.service.url:http://13.61.143.100:8000}") String visualServiceUrl
     ) {
         this.repository = repository;
         this.nodeEnrichedService = nodeEnrichedService;

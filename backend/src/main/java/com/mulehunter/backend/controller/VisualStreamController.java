@@ -18,7 +18,7 @@ public class VisualStreamController {
 
     public VisualStreamController(WebClient.Builder builder) {
         this.webClient = builder
-                .baseUrl("http://127.0.0.1:8000") // FastAPI base
+                .baseUrl("http://13.61.143.100:8000") // FastAPI base
                 .build();
     }
 
